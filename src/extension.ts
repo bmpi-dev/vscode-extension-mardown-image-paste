@@ -10,7 +10,16 @@ import * as Constant from './const';
 import { createCdnUploader } from './CdnUploader/index';
 import { guid } from './tools';
 
-const ipc = require('node-ipc');
+// Import ipc with try-catch
+let ipc: any;
+try {
+    ipc = require('node-ipc');
+    if (!ipc || !ipc.config) {
+        console.error('node-ipc module loaded but ipc.config is undefined');
+    }
+} catch (error) {
+    console.error('Failed to load node-ipc module:', error);
+}
 
 let configuration = vscode.workspace.getConfiguration('markdownPasteImage');
 tinify.key = configuration.get('tinyPngKey') || ''; // the key is assigned to property _key
@@ -47,71 +56,94 @@ export function deactivate() {
 
 function initPlugin(initInActivate: boolean) {
     // The code you place here will be executed every time your command is executed
-    spawn('eiis');
+    try {
+        // Try to run eiis with nvm environment
+        spawn('/bin/bash', ['-c', 'source ~/.nvm/nvm.sh && nvm use default && eiis']);
+    } catch (error) {
+        console.error('Error spawning eiis:', error);
+    }
+
+    // Check if ipc is properly loaded
+    if (!ipc || !ipc.config) {
+        console.error('IPC module not properly loaded');
+        vscode.window.showErrorMessage('Failed to initialize IPC for image paste. Try reinstalling the node-ipc dependency.');
+        return;
+    }
 
     // connect to the ipc server started by electron process
-    ipc.config.id = Constant.parentIpcId;
-    ipc.config.retry = 1500;
-    ipc.config.silent = true;
+    try {
+        ipc.config.id = Constant.parentIpcId;
+        ipc.config.retry = 1500;
+        ipc.config.silent = true;
 
-    ipc.connectTo(Constant.childIpcId, () => {
-        ipcChannel = ipc.of[Constant.childIpcId];
-
-        ipcChannel.on('connect', () => {
-            // the first time invoke this plugin, the icp is not connected,
-            // ipcChannel is not initialized, so we trigger the message here.
-            if (initInActivate) {
-                ipcChannel.emit(Constant.msg_getClipboardContent, '');
+        ipc.connectTo(Constant.childIpcId, () => {
+            // Make sure ipc.of[Constant.childIpcId] exists before assigning it
+            ipcChannel = ipc.of && ipc.of[Constant.childIpcId] ? ipc.of[Constant.childIpcId] : null;
+            
+            if (!ipcChannel) {
+                vscode.window.showWarningMessage('Failed to establish IPC connection for image paste');
+                return;
             }
-        });
+            
+            ipcChannel.on('connect', () => {
+                // the first time invoke this plugin, the icp is not connected,
+                // ipcChannel is not initialized, so we trigger the message here.
+                if (initInActivate) {
+                    ipcChannel.emit(Constant.msg_getClipboardContent, '');
+                }
+            });
 
-        ipcChannel.on(Constant.msg_resClipboardContent, (data: any) => {
-            let buffer = new Buffer(data.data);
+            ipcChannel.on(Constant.msg_resClipboardContent, (data: any) => {
+                let buffer = new Buffer(data.data);
 
-            if (!data || !data.data || !data.data.length) {
-                return vscode.window.showWarningMessage('Please copy a picture to clipboard for paste!');
-            }
+                if (!data || !data.data || !data.data.length) {
+                    return vscode.window.showWarningMessage('Please copy a picture to clipboard for paste!');
+                }
 
-            if ((tinify as any)._key) {
-                // if tinify key is set, we leverage the tool to optimize the picture.
-                tinify.fromBuffer(buffer).toBuffer((err, data) => {
-                    if (err) {
-                        throw err;
+                if ((tinify as any)._key) {
+                    // if tinify key is set, we leverage the tool to optimize the picture.
+                    tinify.fromBuffer(buffer).toBuffer((err, data) => {
+                        if (err) {
+                            throw err;
+                        }
+
+                        if (data) {
+                            buffer = new Buffer(data);
+                        }
+                    });
+                    console.log('It\'s optimized!');
+                }
+
+                let currentFilePath = getCurrentFilePath();
+                console.log(currentFilePath);
+                // if the target file is a temporary file or md file, then try to upload asset to cdn
+                if (currentFilePath.match(/^Untitled-.*|.*\.md$/)) {
+                    let uploader = createCdnUploader(cdnType, configuration);
+                    console.log(uploader);
+                    if (uploader) {
+                        uploader
+                            .upload(buffer)
+                            .then(url => {
+                                insertImageToMd(url);
+                            })
+                            .catch(e => {
+                                // cdn upload fail
+                                vscode.window.showInformationMessage('upload to cdn fail');
+                            });
+                    } else {
+                        // no cdn
+                        copyAssetToCurrentFolder(buffer, currentFilePath);
                     }
-
-                    if (data) {
-                        buffer = new Buffer(data);
-                    }
-                });
-                console.log('It\'s optimized!');
-            }
-
-            let currentFilePath = getCurrentFilePath();
-            console.log(currentFilePath);
-            // if the target file is a temporary file or md file, then try to upload asset to cdn
-            if (currentFilePath.match(/^Untitled-.*|.*\.md$/)) {
-                let uploader = createCdnUploader(cdnType, configuration);
-                console.log(uploader);
-                if (uploader) {
-                    uploader
-                        .upload(buffer)
-                        .then(url => {
-                            insertImageToMd(url);
-                        })
-                        .catch(e => {
-                            // cdn upload fail
-                            vscode.window.showInformationMessage('upload to cdn fail');
-                        });
                 } else {
-                    // no cdn
+                    // target file is not md or temporary file.
                     copyAssetToCurrentFolder(buffer, currentFilePath);
                 }
-            } else {
-                // target file is not md or temporary file.
-                copyAssetToCurrentFolder(buffer, currentFilePath);
-            }
+            });
         });
-    });
+    } catch (error) {
+        console.error('Error initializing IPC connection:', error);
+        vscode.window.showErrorMessage('Failed to initialize IPC for image paste: ' + error);
+    }
 }
 
 function insertImageToMd(url: String) {
