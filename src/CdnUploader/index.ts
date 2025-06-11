@@ -20,6 +20,7 @@ export function createCdnUploader(type: String, config: vscode.WorkspaceConfigur
       return new SMUploader();
 
     case 's3':
+    case 'r2':  // 添加对 R2 类型的支持
       return new S3Uploader(config);
 
     default:

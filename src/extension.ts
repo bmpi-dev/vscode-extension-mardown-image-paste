@@ -118,20 +118,28 @@ function initPlugin(initInActivate: boolean) {
                 console.log(currentFilePath);
                 // if the target file is a temporary file or md file, then try to upload asset to cdn
                 if (currentFilePath.match(/^Untitled-.*|.*\.md$/)) {
+                    console.log('Trying to upload to CDN, cdnType:', cdnType);
                     let uploader = createCdnUploader(cdnType, configuration);
-                    console.log(uploader);
+                    console.log('Uploader created:', uploader, 'cdnType:', cdnType);
                     if (uploader) {
+                        console.log('Attempting to upload to', cdnType);
                         uploader
                             .upload(buffer)
                             .then(url => {
+                                console.log('Upload successful, URL:', url);
                                 insertImageToMd(url);
                             })
                             .catch(e => {
                                 // cdn upload fail
-                                vscode.window.showInformationMessage('upload to cdn fail');
+                                console.error('CDN upload failed with error:', e);
+                                vscode.window.showErrorMessage(`Upload to ${cdnType} failed: ${e.message || e}`);
+                                // Fallback to local storage when CDN fails
+                                copyAssetToCurrentFolder(buffer, currentFilePath);
                             });
                     } else {
                         // no cdn
+                        console.log('No CDN uploader created for type:', cdnType);
+                        vscode.window.showWarningMessage(`No CDN uploader configured for type: ${cdnType}`);
                         copyAssetToCurrentFolder(buffer, currentFilePath);
                     }
                 } else {
