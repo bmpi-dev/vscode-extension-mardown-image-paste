@@ -10,13 +10,25 @@
 // to report the results back to the caller. When the tests are finished, return
 // a possible error to the callback or null if none.
 
-import * as testRunner from 'vscode/lib/testrunner';
+import * as path from 'path';
+import { runTests } from '@vscode/test-electron';
 
-// You can directly control Mocha options by uncommenting the following lines
-// See https://github.com/mochajs/mocha/wiki/Using-mocha-programmatically#set-options for more info
-testRunner.configure({
-    ui: 'tdd', 		// the TDD UI is being used in extension.test.ts (suite, test, etc.)
-    useColors: true // colored output from test results
-});
+async function main() {
+  try {
+    // The folder containing the Extension Manifest package.json
+    // Passed to `--extensionDevelopmentPath`
+    const extensionDevelopmentPath = path.resolve(__dirname, '../../');
 
-module.exports = testRunner;
+    // The path to test runner
+    // Passed to --extensionTestsPath
+    const extensionTestsPath = path.resolve(__dirname, './suite/index');
+
+    // Download VS Code, unzip it and run the integration test
+    await runTests({ extensionDevelopmentPath, extensionTestsPath });
+  } catch (err) {
+    console.error('Failed to run tests', err);
+    process.exit(1);
+  }
+}
+
+main();

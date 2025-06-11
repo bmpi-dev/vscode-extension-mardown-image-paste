@@ -9,7 +9,7 @@
     "url": "https://github.com/njleonzhang/vscode-extension-mardown-image-paste"
   },
   "engines": {
-    "vscode": "^1.25.0"
+    "vscode": "^1.60.0"
   },
   "categories": [
     "Other"
@@ -23,6 +23,36 @@
       "type": "object",
       "title": "markdown paste image configuration",
       "properties": {
+        "markdownPasteImage.s3AccessKeyId": {
+          "type": "string",
+          "default": "",
+          "description": "AWS S3 or Cloudflare R2 access key ID"
+        },
+        "markdownPasteImage.s3SecretAccessKey": {
+          "type": "string",
+          "default": "",
+          "description": "AWS S3 or Cloudflare R2 secret access key"
+        },
+        "markdownPasteImage.s3Region": {
+          "type": "string",
+          "default": "",
+          "description": "AWS S3 region or Cloudflare R2 region (e.g. auto for Cloudflare R2)"
+        },
+        "markdownPasteImage.s3Endpoint": {
+          "type": "string",
+          "default": "",
+          "description": "Custom endpoint for S3 API (required for Cloudflare R2, e.g. https://<account-id>.r2.cloudflarestorage.com)"
+        },
+        "markdownPasteImage.s3Bucket": {
+          "type": "string",
+          "default": "",
+          "description": "AWS S3 or Cloudflare R2 bucket name"
+        },
+        "markdownPasteImage.s3PreUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Base URL prefix for accessing uploaded images"
+        },
         "markdownPasteImage.tinyPngKey": {
           "type": "string",
           "default": "",
@@ -96,7 +126,8 @@
         "markdownPasteImage.cdnType": {
           "type": "string",
           "default": "qiniu",
-          "description": "the cdn type"
+          "enum": ["qiniu", "github", "s3", "r2", "cloudinary"],
+          "description": "the cdn type (qiniu, github, s3, r2, cloudinary)"
         }
       }
     },
@@ -115,32 +146,34 @@
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "npm run compile && node ./node_modules/vscode/bin/test",
-    "package": "vsce package --yarn",
-    "publish": "vsce publish --yarn"
+    "test": "npm run compile && node ./node_modules/@vscode/test-electron/out/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
-    "@types/mocha": "^2.2.42",
-    "@types/node": "^7.0.43",
+    "@types/mocha": "^9.1.1",
+    "@types/node": "^16.11.7",
+    "@types/vscode": "^1.60.0",
+    "@vscode/test-electron": "^2.3.8",
     "tslint": "^5.8.0",
-    "typescript": "^2.6.1",
-    "vscode": "^1.1.18"
+    "typescript": "^4.9.5",
+    "@vscode/vsce": "^2.22.0"
   },
   "dependencies": {
-    "aws-sdk": "^2.596.0",
-    "axios": "^0.18.0",
+    "@aws-sdk/client-s3": "^3.450.0",
+    "@aws-sdk/s3-request-presigner": "^3.450.0",
+    "axios": "^1.6.0",
     "child_process": "^1.0.2",
-    "cloudinary": "^1.11.0",
-    "file-type": "^12.4.2",
-    "form-data": "^2.3.2",
+    "cloudinary": "^1.40.0",
+    "file-type": "^16.5.4",
+    "form-data": "^4.0.0",
     "fs": "^0.0.1-security",
-    "http-proxy-agent": "^2.1.0",
-    "node-ipc": "^9.1.1",
+    "http-proxy-agent": "^7.0.0",
+    "node-ipc": "^11.1.0",
     "path": "^0.12.7",
-    "qiniu": "^7.2.1",
+    "qiniu": "^7.10.1",
     "sha1": "^1.1.1",
-    "tinify": "^1.6.0-beta.2",
-    "tunnel": "^0.0.5"
+    "tinify": "^1.7.1",
+    "tunnel": "^0.0.6"
   }
 }

@@ -36,7 +36,7 @@ export class CloudinaryUploader implements CdnUploader {
           }
         });
       } catch (e) {
-        vscode.window.showWarningMessage(e);
+        vscode.window.showWarningMessage(typeof e === 'string' ? e : String(e));
       }
     });
   }
