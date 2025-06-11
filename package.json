@@ -126,7 +126,13 @@
         "markdownPasteImage.cdnType": {
           "type": "string",
           "default": "qiniu",
-          "enum": ["qiniu", "github", "s3", "r2", "cloudinary"],
+          "enum": [
+            "qiniu",
+            "github",
+            "s3",
+            "r2",
+            "cloudinary"
+          ],
           "description": "the cdn type (qiniu, github, s3, r2, cloudinary)"
         }
       }
@@ -155,9 +161,9 @@
     "@types/node": "^16.11.7",
     "@types/vscode": "^1.60.0",
     "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
     "tslint": "^5.8.0",
-    "typescript": "^4.9.5",
-    "@vscode/vsce": "^2.22.0"
+    "typescript": "^4.9.5"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.450.0",
@@ -170,12 +176,12 @@
     "fs": "^0.0.1-security",
     "http-proxy-agent": "^7.0.0",
     "https-proxy-agent": "^7.0.2",
-    "node-ipc": "^11.1.0",
-    "uuid": "^9.0.1",
+    "node-ipc": "^12.0.0",
     "path": "^0.12.7",
     "qiniu": "^7.10.1",
     "sha1": "^1.1.1",
     "tinify": "^1.7.1",
-    "tunnel": "^0.0.6"
+    "tunnel": "^0.0.6",
+    "uuid": "^9.0.1"
   }
 }
